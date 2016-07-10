@@ -3,6 +3,84 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## Master
+
+## [2.6.0](https://github.com/ReactiveX/RxSwift/releases/tag/2.6.0)
+
+#### Features
+
+* Adds Swift 2.3 compatibility.
+* Adds `UIViewController.rx_title` extension.
+* Adds `UIScrollView.rx_scrollEnabled` extension.
+* Resolve static analysis issues relating to non-use of an assigned value, and potential null dereferences in RxCocoa's Objective-C classes.
+* Changes `forwardDelegate` property type on `DelegateProxy` from `assign` to `weak`.
+* Simplifies UITable/CollectionView data source generic parameters.
+* Adds simple usage examples to UITable/CollectionView data source extensions.
+* Documents UITable/CollectionView data source extensions memory management and adds unit tests to cover that documentation.
+* Adds `.jazzy.yml`
+* Adds `UITabBar` extensions and delegate proxy wrapper
+    * rx_didSelectItem
+    * rx_willBeginCustomizing
+    * rx_didBeginCustomizing
+    * rx_willEndCustomizing
+    * rx_didEndCustomizing
+* Adds `UIPickerView` delegate proxy and extensions:
+    * rx_itemSelected
+* Adds `UIAlertAction.rx_enabled` extension.
+* Adds `UIButton.rx_title(controlState: UIControlState = .Normal)` extension.
+* Adds `UIPageControl.rx_currentPage` extension.
+* Adds `hasObservers` property to `*Subject`.
+
+#### Anomalies
+
+* Fixes problem with UITable/CollectionView releasing of data sources when result subscription disposable wasn't retained.
+* Fixes all Xcode analyzer warnings
+
+
+## [2.5.0](https://github.com/ReactiveX/RxSwift/releases/tag/2.5.0)
+
+#### Features
+
+* Exposes `installForwardDelegate`.
+* Adds `proxyForObject` as protocol extension and deprecates global function version.
+* Improves `installForwardDelegate` assert messaging.
+* Improves gesture recognizer extensions to use typed gesture recognizers in `rx_event`.
+* Adds `RxTextInput` protocol to enable creating reactive extensions for `UITextInput/NSTextInput`.
+* Adds `rx_willDisplayCell` and `rx_didEndDisplayingCell` extensions to `UITableView`.
+* Improves playgrounds.
+
+
+#### Anomalies
+
+* Fixes in documentation.
+* Turns off Bitcode for `RxTests` CocoaPods integration.
+* Fixes `UITextField.rx_text` and `UITextView.rx_text` integrations to be more robust when used with two way binding.
+* Fixes two way binding example code so it now properly handles IME used in Asian cultures and adds explanations how to properly perform two way bindings. https://github.com/ReactiveX/RxSwift/issues/649
+* Removes `distinctUntilChanged` from control extensions. https://github.com/ReactiveX/RxSwift/issues/626
+
+
+## [2.4.0](https://github.com/ReactiveX/RxSwift/releases/tag/2.4)
+
+#### Features
+
+* adds `Driver.drive` with `Variable` parameter.
+* exposes `RxSearchBarDelegateProxy`
+* adds `rx_cancelButtonClicked` to `UISearchBar`.
+* adds `rx_searchButtonClicked` to `UISearchBar`.
+* adds `UISearchController` extensions:
+  * `rx_didDismiss`
+  * `rx_didPresent`
+  * `rx_present`
+  * `rx_willDismiss`
+  * `rx_willPresent`
+
+
+#### Anomalies
+
+* Fixes anomaly with `multicast` disposing subscription.
+* Small grammar fixes in code.
+* Fixes in documentation.
+
 ## [2.3.1](https://github.com/ReactiveX/RxSwift/releases/tag/2.3.1)
 
 #### Features
@@ -40,12 +118,12 @@ All notable changes to this project will be documented in this file.
 This is example of those changes:
 
 ```swift
-- public func rx_itemsWithCellFactory<S : SequenceType, O : ObservableType where O.E == S>
+- public func rx_itemsWithCellFactory<S : Sequence, O : ObservableType where O.E == S>
       (source: O)
-      (cellFactory: (UITableView, Int, S.Generator.Element) -> UITableViewCell) -> Disposable
-+ public func rx_itemsWithCellFactory<S : SequenceType, O : ObservableType where O.E == S>
+      (cellFactory: (UITableView, Int, S.Iterator.Element) -> UITableViewCell) -> Disposable
++ public func rx_itemsWithCellFactory<S : Sequence, O : ObservableType where O.E == S>
       (source: O)
-      -> (cellFactory: (UITableView, Int, S.Generator.Element) -> UITableViewCell) -> Disposable
+      -> (cellFactory: (UITableView, Int, S.Iterator.Element) -> UITableViewCell) -> Disposable
 ```
 
 * Fixes anomaly in `CLLocationManager` extensions
@@ -317,7 +395,7 @@ let (
 * `NSURLSession` extensions now return `Observable<(NSData!, NSHTTPURLResponse)>` instead of `Observable<(NSData!, NSURLResponse!)>`.
 * Optimizes consecutive map operators. For example `map(validate1).map(validate2).map(parse)` is now internally optimized to one `map` operator.
 * Adds overloads for `just`, `sequenceOf`, `toObservable` that accept scheduler.
-* Deprecates `asObservable` extension of `SequenceType` in favor of `toObservable`.
+* Deprecates `asObservable` extension of `Sequence` in favor of `toObservable`.
 * Adds `toObservable` extension to `Array`.
 * Improves table view animated data source example.
 * Polishing of `RxDataSourceStarterKit`
@@ -429,7 +507,7 @@ let (
 * Renames `ScopedDispose` to `ScopedDisposable`
 * Deprecates `observeSingleOn` in favor of `observeOn`
 * Adds inline documentation
-* Renames `from` to `asObservable` extension method on `SequenceType`
+* Renames `from` to `asObservable` extension method on `Sequence`
 * Renames `catchErrorResumeNext` in favor of `catchErrorJustReturn`
 * Deprecates `catchErrorToResult`, the preferred way is to use Swift `do/try/catch` mechanism.
 * Deprecates `RxResult`, the preferred way is to use Swift `do/try/catch` mechanism.

@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:Rx.playground">
+   </FileRef>
+   <FileRef
       location = "group:Package.swift">
    </FileRef>
    <FileRef
@@ -9,6 +12,9 @@
    </FileRef>
    <FileRef
       location = "group:README.md">
+   </FileRef>
+   <FileRef
+      location = "group:ISSUE_TEMPLATE.md">
    </FileRef>
    <FileRef
       location = "group:CHANGELOG.md">
@@ -58,6 +64,9 @@
          </FileRef>
       </Group>
       <FileRef
+         location = "group:all-tests.sh">
+      </FileRef>
+      <FileRef
          location = "group:automation-tests.sh">
       </FileRef>
       <FileRef
@@ -65,9 +74,6 @@
       </FileRef>
       <FileRef
          location = "group:/Users/kzaher/Projects/RxSwift/scripts/package-spm.swift">
-      </FileRef>
-      <FileRef
-         location = "group:pre-release-tests.sh">
       </FileRef>
       <FileRef
          location = "group:test-linux.sh">
@@ -104,9 +110,6 @@
          location = "group:HotAndColdObservables.md">
       </FileRef>
       <FileRef
-         location = "group:IssueTemplate.md">
-      </FileRef>
-      <FileRef
          location = "group:Linux.md">
       </FileRef>
       <FileRef
@@ -128,9 +131,6 @@
          location = "group:Warnings.md">
       </FileRef>
    </Group>
-   <FileRef
-      location = "group:Rx.playground">
-   </FileRef>
    <FileRef
       location = "group:Rx.xcodeproj">
    </FileRef>

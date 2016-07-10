@@ -13,13 +13,20 @@ import RxCocoa
 #endif
 
 class WikipediaSearchViewController: ViewController {
+    @IBOutlet var searchBarContainer: UIView!
+    
+    private let searchController = UISearchController(searchResultsController: UITableViewController())
+    
+    private var resultsViewController: UITableViewController {
+        return (self.searchController.searchResultsController as? UITableViewController)!
+    }
     
     private var resultsTableView: UITableView {
-        return self.searchDisplayController!.searchResultsTableView
+        return self.resultsViewController.tableView!
     }
 
     private var searchBar: UISearchBar {
-        return self.searchDisplayController!.searchBar
+        return self.searchController.searchBar
     }
 
     override func awakeFromNib() {
@@ -31,6 +38,15 @@ class WikipediaSearchViewController: ViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        let searchBar = self.searchBar
+        let searchBarContainer = self.searchBarContainer
+
+        searchBarContainer?.addSubview(searchBar)
+        searchBar.frame = (searchBarContainer?.bounds)!
+        searchBar.autoresizingMask = .flexibleWidth
+
+        resultsViewController.edgesForExtendedLayout = UIRectEdge()
+
         configureTableDataSource()
         configureKeyboardDismissesOnScroll()
         configureNavigateOnRowClick()
@@ -38,11 +54,15 @@ class WikipediaSearchViewController: ViewController {
     }
 
     func configureTableDataSource() {
-        resultsTableView.registerNib(UINib(nibName: "WikipediaSearchCell", bundle: nil), forCellReuseIdentifier: "WikipediaSearchCell")
+        resultsTableView.register(UINib(nibName: "WikipediaSearchCell", bundle: nil), forCellReuseIdentifier: "WikipediaSearchCell")
         
         resultsTableView.rowHeight = 194
 
+        // This is for clarity only, don't use static dependencies
         let API = DefaultWikipediaAPI.sharedAPI
+
+        resultsTableView.delegate = nil
+        resultsTableView.dataSource = nil
 
         searchBar.rx_text
             .asDriver()
@@ -51,7 +71,7 @@ class WikipediaSearchViewController: ViewController {
             .flatMapLatest { query in
                 API.getSearchResults(query)
                     .retry(3)
-                    .retryOnBecomesReachable([], reachabilityService: ReachabilityService.sharedReachabilityService)
+                    .retryOnBecomesReachable([], reachabilityService: Dependencies.sharedDependencies.reachabilityService)
                     .startWith([]) // clears results on new search term
                     .asDriver(onErrorJustReturn: [])
             }
@@ -66,9 +86,13 @@ class WikipediaSearchViewController: ViewController {
 
     func configureKeyboardDismissesOnScroll() {
         let searchBar = self.searchBar
-
+        let searchController = self.searchController
+        
         resultsTableView.rx_contentOffset
             .asDriver()
+            .filter { _ -> Bool in
+                return !searchController.isBeingPresented()
+            }
             .driveNext { _ in
                 if searchBar.isFirstResponder() {
                     _ = searchBar.resignFirstResponder()
@@ -83,7 +107,7 @@ class WikipediaSearchViewController: ViewController {
         resultsTableView.rx_modelSelected(SearchResultViewModel.self)
             .asDriver()
             .driveNext { searchResult in
-                wireframe.openURL(searchResult.searchResult.URL)
+                wireframe.open(url:searchResult.searchResult.URL)
             }
             .addDisposableTo(disposeBag)
     }
@@ -94,7 +118,7 @@ class WikipediaSearchViewController: ViewController {
             DefaultImageService.sharedImageService.loadingImage
         ) { $0 || $1 }
             .distinctUntilChanged()
-            .drive(UIApplication.sharedApplication().rx_networkActivityIndicatorVisible)
+            .drive(UIApplication.shared().rx_networkActivityIndicatorVisible)
             .addDisposableTo(disposeBag)
     }
 }

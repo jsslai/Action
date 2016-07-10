@@ -59,14 +59,14 @@ extension ObservableCreationTests {
 
         let d = SingleAssignmentDisposable()
 
-        let res = scheduler.createObserver(Int)
+        let res = scheduler.createObserver(Int.self)
 
         scheduler.scheduleAt(100) {
             d.disposable = Observable.just(42, scheduler: scheduler).subscribe { e in
                 res.on(e)
 
                 switch e {
-                case .Next:
+                case .next:
                     d.dispose()
                 default:
                     break

@@ -85,7 +85,7 @@ internal extension NSObject {
     }
 
     // Uses objc_sync on self to perform a locked operation.
-    internal func doLocked(closure: () -> Void) {
+    internal func doLocked(_ closure: () -> Void) {
         objc_sync_enter(self); defer { objc_sync_exit(self) }
         closure()
     }

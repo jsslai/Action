@@ -6,14 +6,14 @@ import RxCocoa
 public typealias CocoaAction = Action<Void, Void>
 
 /// Possible errors from invoking execute()
-public enum ActionError: ErrorType {
-    case NotEnabled
-    case UnderlyingError(ErrorType)
+public enum ActionError: ErrorProtocol {
+    case notEnabled
+    case underlyingError(ErrorProtocol)
 }
 
 /// TODO: Add some documentation.
 public final class Action<Input, Element> {
-    public typealias WorkFactory = Input -> Observable<Element>
+    public typealias WorkFactory = (Input) -> Observable<Element>
 
     public let _enabledIf: Observable<Bool>
     public let workFactory: WorkFactory
@@ -47,10 +47,10 @@ public final class Action<Input, Element> {
     }
     public private(set) var _enabled = BehaviorSubject(value: true)
 
-    private let executingQueue = dispatch_queue_create("com.ashfurrow.Action.executingQueue", DISPATCH_QUEUE_SERIAL)
+    private let executingQueue = DispatchQueue(label: "com.ashfurrow.Action.executingQueue", attributes: DispatchQueueAttributes.serial)
     private let disposeBag = DisposeBag()
 
-    public init<B: BooleanType>(enabledIf: Observable<B>, workFactory: WorkFactory) {
+    public init<B: Boolean>(enabledIf: Observable<B>, workFactory: WorkFactory) {
         self._enabledIf = enabledIf.map { booleanType in
             return booleanType.boolValue
         }
@@ -74,7 +74,7 @@ public extension Action {
 // MARK: Execution!
 public extension Action {
 
-    public func execute(input: Input) -> Observable<Element> {
+    public func execute(_ input: Input) -> Observable<Element> {
 
         // Buffer from the work to a replay subject.
         let buffer = ReplaySubject<Element>.createUnbounded()
@@ -90,7 +90,7 @@ public extension Action {
 
         // Make sure we started executing and we're accidentally disabled.
         guard startedExecuting else {
-            let error = ActionError.NotEnabled
+            let error = ActionError.notEnabled
             self._errors.onNext(error)
             buffer.onError(error)
 
@@ -100,14 +100,14 @@ public extension Action {
         let work = self.workFactory(input)
         defer {
             // Subscribe to the work.
-            work.multicast(buffer).connect()
+            _ = work.multicast(buffer).connect()
         }
 
         buffer.subscribe(onNext: { element in
                     self._elements.onNext(element)
                 },
                 onError: { error in
-                    self._errors.onNext(ActionError.UnderlyingError(error))
+                    self._errors.onNext(ActionError.underlyingError(error))
                 },
                 onCompleted: nil,
                 onDisposed: {
@@ -121,8 +121,8 @@ public extension Action {
 }
 
 private extension Action {
-    private func doLocked(closure: () -> Void) {
-        dispatch_sync(executingQueue, closure)
+    private func doLocked(_ closure: () -> Void) {
+        executingQueue.sync(execute: closure)
     }
 }
 

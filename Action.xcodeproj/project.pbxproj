@@ -119,6 +119,7 @@
 				TargetAttributes = {
 					1CEC12C81CB6326C009DF37B = {
 						CreatedOnToolsVersion = 7.3;
+						LastSwiftMigration = 0800;
 					};
 				};
 			};
@@ -275,6 +276,7 @@
 				PRODUCT_NAME = Action;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -297,6 +299,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ashfurrow.Action;
 				PRODUCT_NAME = Action;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};
