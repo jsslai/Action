@@ -6,9 +6,9 @@ import RxCocoa
 public typealias CocoaAction = Action<Void, Void>
 
 /// Possible errors from invoking execute()
-public enum ActionError: ErrorProtocol {
+public enum ActionError: Error {
     case notEnabled
-    case underlyingError(ErrorProtocol)
+    case underlyingError(Error)
 }
 
 /// TODO: Add some documentation.
@@ -23,21 +23,21 @@ public final class Action<Input, Element> {
     public var errors: Observable<ActionError> {
         return self._errors.asObservable()
     }
-    private let _errors = PublishSubject<ActionError>()
+    fileprivate let _errors = PublishSubject<ActionError>()
 
     /// Whether or not we're currently executing. 
     /// Delivered on whatever scheduler they were sent from.
     public var elements: Observable<Element> {
         return self._elements.asObservable()
     }
-    private let _elements = PublishSubject<Element>()
+    fileprivate let _elements = PublishSubject<Element>()
 
     /// Whether or not we're currently executing. 
     /// Always observed on MainScheduler.
     public var executing: Observable<Bool> {
         return self._executing.asObservable().observeOn(MainScheduler.instance)
     }
-    private let _executing = Variable(false)
+    fileprivate let _executing = Variable(false)
 
     /// Whether or not we're enabled. Note that this is a *computed* sequence
     /// property based on enabledIf initializer and if we're currently executing.
@@ -47,15 +47,15 @@ public final class Action<Input, Element> {
     }
     public private(set) var _enabled = BehaviorSubject(value: true)
 
-    private let executingQueue = DispatchQueue(label: "com.ashfurrow.Action.executingQueue", attributes: DispatchQueueAttributes.serial)
-    private let disposeBag = DisposeBag()
+    fileprivate let executingQueue = DispatchQueue(label: "com.ashfurrow.Action.executingQueue", attributes: [])
+    fileprivate let disposeBag = DisposeBag()
 
-    public init<B: Boolean>(enabledIf: Observable<B>, workFactory: WorkFactory) {
+    public init(enabledIf: Observable<Bool>, workFactory: @escaping WorkFactory) {
         self._enabledIf = enabledIf.map { booleanType in
-            return booleanType.boolValue
+            return booleanType
         }
         self.workFactory = workFactory
-
+        
         Observable.combineLatest(self._enabledIf, self.executing) { (enabled, executing) -> Bool in
             return enabled && !executing
         }.bindTo(_enabled).addDisposableTo(disposeBag)
@@ -66,7 +66,7 @@ public final class Action<Input, Element> {
 public extension Action {
 
     /// Always enabled.
-    public convenience init(workFactory: WorkFactory) {
+    public convenience init(workFactory: @escaping WorkFactory) {
         self.init(enabledIf: .just(true), workFactory: workFactory)
     }
 }
@@ -120,13 +120,13 @@ public extension Action {
     }
 }
 
-private extension Action {
-    private func doLocked(_ closure: () -> Void) {
+fileprivate extension Action {
+    fileprivate func doLocked(_ closure: () -> Void) {
         executingQueue.sync(execute: closure)
     }
 }
 
-internal extension BehaviorSubject where Element: BooleanLiteralConvertible {
+internal extension BehaviorSubject where Element: ExpressibleByBooleanLiteral {
     var valueOrFalse: Element {
         guard let value = try? value() else { return false }
 

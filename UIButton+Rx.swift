@@ -29,7 +29,7 @@ public extension UIButton {
                 if let action = newValue {
                     action
                         .enabled
-                        .bindTo(self.rx_enabled)
+                        .bindTo(self.rx.enabled)
                         .addDisposableTo(self.actionDisposeBag)
 
                     // Technically, this file is only included on tv/iOS platforms,
@@ -37,9 +37,9 @@ public extension UIButton {
                     let lookupControlEvent: ControlEvent<Void>?
 
                     #if os(tvOS)
-                        lookupControlEvent = self.rx_primaryAction
+                        lookupControlEvent = self.rx.primaryAction
                     #elseif os(iOS)
-                        lookupControlEvent = self.rx_tap
+                        lookupControlEvent = self.rx.tap
                     #endif
 
                     guard let controlEvent = lookupControlEvent else {
@@ -47,9 +47,7 @@ public extension UIButton {
                     }
 
                     controlEvent
-                        .subscribeNext { _ -> Void in
-                            action.execute()
-                        }
+                        .subscribe(onNext: { _ in _ = action.execute()})
                         .addDisposableTo(self.actionDisposeBag)
                 }
             }
