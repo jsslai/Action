@@ -15,8 +15,8 @@ class AnonymousObservableSink<O: ObserverType> : Sink<O>, ObserverType {
     // state
     private var _isStopped: AtomicInt = 0
 
-    override init(observer: O) {
-        super.init(observer: observer)
+    override init(observer: O, cancel: Cancelable) {
+        super.init(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<E>) {
@@ -44,13 +44,13 @@ class AnonymousObservable<Element> : Producer<Element> {
 
     let _subscribeHandler: SubscribeHandler
 
-    init(_ subscribeHandler: SubscribeHandler) {
+    init(_ subscribeHandler: @escaping SubscribeHandler) {
         _subscribeHandler = subscribeHandler
     }
 
-    override func run<O : ObserverType where O.E == Element>(_ observer: O) -> Disposable {
-        let sink = AnonymousObservableSink(observer: observer)
-        sink.disposable = sink.run(self)
-        return sink
+    override func run<O : ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == Element {
+        let sink = AnonymousObservableSink(observer: observer, cancel: cancel)
+        let subscription = sink.run(self)
+        return (sink: sink, subscription: subscription)
     }
 }

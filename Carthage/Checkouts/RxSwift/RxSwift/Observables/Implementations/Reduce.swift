@@ -15,11 +15,11 @@ class ReduceSink<SourceType, AccumulateType, O: ObserverType> : Sink<O>, Observe
     private let _parent: Parent
     private var _accumulation: AccumulateType
     
-    init(parent: Parent, observer: O) {
+    init(parent: Parent, observer: O, cancel: Cancelable) {
         _parent = parent
         _accumulation = parent._seed
         
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
     
     func on(_ event: Event<SourceType>) {
@@ -54,21 +54,21 @@ class Reduce<SourceType, AccumulateType, ResultType> : Producer<ResultType> {
     typealias AccumulatorType = (AccumulateType, SourceType) throws -> AccumulateType
     typealias ResultSelectorType = (AccumulateType) throws -> ResultType
     
-    private let _source: Observable<SourceType>
-    private let _seed: AccumulateType
-    private let _accumulator: AccumulatorType
-    private let _mapResult: ResultSelectorType
+    fileprivate let _source: Observable<SourceType>
+    fileprivate let _seed: AccumulateType
+    fileprivate let _accumulator: AccumulatorType
+    fileprivate let _mapResult: ResultSelectorType
     
-    init(source: Observable<SourceType>, seed: AccumulateType, accumulator: AccumulatorType, mapResult: ResultSelectorType) {
+    init(source: Observable<SourceType>, seed: AccumulateType, accumulator: @escaping AccumulatorType, mapResult: @escaping ResultSelectorType) {
         _source = source
         _seed = seed
         _accumulator = accumulator
         _mapResult = mapResult
     }
-    
-    override func run<O: ObserverType where O.E == ResultType>(_ observer: O) -> Disposable {
-        let sink = ReduceSink(parent: self, observer: observer)
-        sink.disposable = _source.subscribe(sink)
-        return sink
+
+    override func run<O: ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == ResultType {
+        let sink = ReduceSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = _source.subscribe(sink)
+        return (sink: sink, subscription: subscription)
     }
 }

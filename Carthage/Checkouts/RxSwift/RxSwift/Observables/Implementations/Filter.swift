@@ -12,13 +12,11 @@ class FilterSink<O : ObserverType>: Sink<O>, ObserverType {
     typealias Predicate = (Element) throws -> Bool
     typealias Element = O.E
     
-    typealias Parent = Filter<Element>
-    
     private let _predicate: Predicate
     
-    init(predicate: Predicate, observer: O) {
+    init(predicate: @escaping Predicate, observer: O, cancel: Cancelable) {
         _predicate = predicate
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
     
     func on(_ event: Event<Element>) {
@@ -47,14 +45,14 @@ class Filter<Element> : Producer<Element> {
     private let _source: Observable<Element>
     private let _predicate: Predicate
     
-    init(source: Observable<Element>, predicate: Predicate) {
+    init(source: Observable<Element>, predicate: @escaping Predicate) {
         _source = source
         _predicate = predicate
     }
     
-    override func run<O: ObserverType where O.E == Element>(_ observer: O) -> Disposable {
-        let sink = FilterSink(predicate: _predicate, observer: observer)
-        sink.disposable = _source.subscribe(sink)
-        return sink
+    override func run<O: ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == Element {
+        let sink = FilterSink(predicate: _predicate, observer: observer, cancel: cancel)
+        let subscription = _source.subscribe(sink)
+        return (sink: sink, subscription: subscription)
     }
 }

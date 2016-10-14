@@ -24,7 +24,10 @@ public final class MainScheduler : SerialDispatchQueueScheduler {
 
     var numberEnqueued: AtomicInt = 0
 
-    private init() {
+    /**
+     Initializes new instance of `MainScheduler`.
+    */
+    public init() {
         _mainQueue = DispatchQueue.main
         super.init(serialQueue: _mainQueue)
     }
@@ -49,7 +52,7 @@ public final class MainScheduler : SerialDispatchQueueScheduler {
         }
     }
 
-    override func scheduleInternal<StateType>(_ state: StateType, action: (StateType) -> Disposable) -> Disposable {
+    override func scheduleInternal<StateType>(_ state: StateType, action: @escaping (StateType) -> Disposable) -> Disposable {
         let currentNumberEnqueued = AtomicIncrement(&numberEnqueued)
 
         if Thread.current.isMainThread && currentNumberEnqueued == 1 {
@@ -61,7 +64,7 @@ public final class MainScheduler : SerialDispatchQueueScheduler {
         let cancel = SingleAssignmentDisposable()
 
         _mainQueue.async {
-            if !cancel.disposed {
+            if !cancel.isDisposed {
                 _ = action(state)
             }
 

@@ -22,15 +22,19 @@ extension BlockingObservable {
     public func toArray() throws -> [E] {
         var elements: [E] = Array<E>()
 
-        var error: ErrorProtocol?
+        var error: Swift.Error?
 
-        let lock = RunLoopLock()
+        let lock = RunLoopLock(timeout: timeout)
 
         let d = SingleAssignmentDisposable()
 
+        defer {
+            d.dispose()
+        }
+
         lock.dispatch {
-            d.disposable = self.source.subscribe { e in
-                if d.disposed {
+            let subscription = self.source.subscribe { e in
+                if d.isDisposed {
                     return
                 }
                 switch e {
@@ -45,11 +49,11 @@ extension BlockingObservable {
                     lock.stop()
                 }
             }
+
+            d.setDisposable(subscription)
         }
 
-        lock.run()
-
-        d.dispose()
+        try lock.run()
 
         if let error = error {
             throw error
@@ -70,15 +74,19 @@ extension BlockingObservable {
     public func first() throws -> E? {
         var element: E?
 
-        var error: ErrorProtocol?
+        var error: Swift.Error?
 
         let d = SingleAssignmentDisposable()
 
-        let lock = RunLoopLock()
+        defer {
+            d.dispose()
+        }
+        
+        let lock = RunLoopLock(timeout: timeout)
 
         lock.dispatch {
-            d.disposable = self.source.subscribe { e in
-                if d.disposed {
+            let subscription = self.source.subscribe { e in
+                if d.isDisposed {
                     return
                 }
 
@@ -97,11 +105,11 @@ extension BlockingObservable {
                 d.dispose()
                 lock.stop()
             }
+
+            d.setDisposable(subscription)
         }
 
-        lock.run()
-
-        d.dispose()
+        try lock.run()
 
         if let error = error {
             throw error
@@ -122,15 +130,19 @@ extension BlockingObservable {
     public func last() throws -> E? {
         var element: E?
 
-        var error: ErrorProtocol?
+        var error: Swift.Error?
 
         let d = SingleAssignmentDisposable()
 
-        let lock = RunLoopLock()
+        defer {
+            d.dispose()
+        }
+        
+        let lock = RunLoopLock(timeout: timeout)
 
         lock.dispatch {
-            d.disposable = self.source.subscribe { e in
-                if d.disposed {
+            let subscription = self.source.subscribe { e in
+                if d.isDisposed {
                     return
                 }
                 switch e {
@@ -146,11 +158,11 @@ extension BlockingObservable {
                 d.dispose()
                 lock.stop()
             }
+
+            d.setDisposable(subscription)
         }
         
-        lock.run()
-        
-        d.dispose()
+        try lock.run()
         
         if let error = error {
             throw error
@@ -180,18 +192,22 @@ extension BlockingObservable {
      - parameter predicate: A function to test each source element for a condition.
      - returns: Returns the only element of an sequence that satisfies the condition in the predicate, and reports an error if there is not exactly one element in the sequence.
      */
-    public func single(_ predicate: (E) throws -> Bool) throws -> E? {
+    public func single(_ predicate: @escaping (E) throws -> Bool) throws -> E? {
         var element: E?
         
-        var error: ErrorProtocol?
+        var error: Swift.Error?
         
         let d = SingleAssignmentDisposable()
+
+        defer {
+            d.dispose()
+        }
         
-        let lock = RunLoopLock()
+        let lock = RunLoopLock(timeout: timeout)
         
         lock.dispatch {
-            d.disposable = self.source.subscribe { e in
-                if d.disposed {
+            let subscription = self.source.subscribe { e in
+                if d.isDisposed {
                     return
                 }
                 switch e {
@@ -222,11 +238,12 @@ extension BlockingObservable {
                 d.dispose()
                 lock.stop()
             }
+
+            d.setDisposable(subscription)
         }
         
-        lock.run()
-        d.dispose()
-        
+        try lock.run()
+
         if let error = error {
             throw error
         }

@@ -12,14 +12,14 @@ import RxSwift
 import Foundation
 
 public enum ReachabilityStatus {
-    case Reachable(viaWiFi: Bool)
+    case reachable(viaWiFi: Bool)
     case unreachable
 }
 
 extension ReachabilityStatus {
     var reachable: Bool {
         switch self {
-        case .Reachable:
+        case .reachable:
             return true
         case .unreachable:
             return false
@@ -47,11 +47,11 @@ class DefaultReachabilityService
         let reachabilitySubject = BehaviorSubject<ReachabilityStatus>(value: .unreachable)
 
         // so main thread isn't blocked when reachability via WiFi is checked
-        let backgroundQueue = DispatchQueue(label: "reachability.wificheck", attributes: DispatchQueueAttributes.serial)
+        let backgroundQueue = DispatchQueue(label: "reachability.wificheck")
 
         reachabilityRef.whenReachable = { reachability in
             backgroundQueue.async {
-                reachabilitySubject.on(.next(.Reachable(viaWiFi: reachabilityRef.isReachableViaWiFi())))
+                reachabilitySubject.on(.next(.reachable(viaWiFi: reachabilityRef.isReachableViaWiFi())))
             }
         }
 

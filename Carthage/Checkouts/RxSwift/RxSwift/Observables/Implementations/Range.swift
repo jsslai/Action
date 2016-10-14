@@ -9,9 +9,9 @@
 import Foundation
 
 class RangeProducer<E: SignedInteger> : Producer<E> {
-    private let _start: E
-    private let _count: E
-    private let _scheduler: ImmediateSchedulerType
+    fileprivate let _start: E
+    fileprivate let _count: E
+    fileprivate let _scheduler: ImmediateSchedulerType
 
     init(start: E, count: E, scheduler: ImmediateSchedulerType) {
         if count < 0 {
@@ -27,21 +27,21 @@ class RangeProducer<E: SignedInteger> : Producer<E> {
         _scheduler = scheduler
     }
     
-    override func run<O : ObserverType where O.E == E>(_ observer: O) -> Disposable {
-        let sink = RangeSink(parent: self, observer: observer)
-        sink.disposable = sink.run()
-        return sink
+    override func run<O : ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == E {
+        let sink = RangeSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = sink.run()
+        return (sink: sink, subscription: subscription)
     }
 }
 
-class RangeSink<O: ObserverType where O.E: SignedInteger> : Sink<O> {
+class RangeSink<O: ObserverType> : Sink<O> where O.E: SignedInteger {
     typealias Parent = RangeProducer<O.E>
     
     private let _parent: Parent
     
-    init(parent: Parent, observer: O) {
+    init(parent: Parent, observer: O, cancel: Cancelable) {
         _parent = parent
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
     
     func run() -> Disposable {

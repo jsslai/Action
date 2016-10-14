@@ -30,7 +30,7 @@ extension ValidationResult: CustomStringConvertible {
 
 struct ValidationColors {
     static let okColor = UIColor(red: 138.0 / 255.0, green: 221.0 / 255.0, blue: 109.0 / 255.0, alpha: 1.0)
-    static let errorColor = UIColor.red()
+    static let errorColor = UIColor.red
 }
 
 extension ValidationResult {
@@ -39,18 +39,18 @@ extension ValidationResult {
         case .ok:
             return ValidationColors.okColor
         case .empty:
-            return UIColor.black()
+            return UIColor.black
         case .validating:
-            return UIColor.black()
+            return UIColor.black
         case .failed:
             return ValidationColors.errorColor
         }
     }
 }
 
-extension UILabel {
-    var ex_validationResult: AnyObserver<ValidationResult> {
-        return UIBindingObserver(UIElement: self) { label, result in
+extension Reactive where Base: UILabel {
+    var validationResult: AnyObserver<ValidationResult> {
+        return UIBindingObserver(UIElement: base) { label, result in
             label.textColor = result.textColor
             label.text = result.description
         }.asObserver()

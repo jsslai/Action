@@ -8,8 +8,8 @@
 
 import Foundation
 import Cocoa
-import RxCocoa
-import RxSwift
+@testable import RxCocoa
+@testable import RxSwift
 import XCTest
 
 // MARK: Protocols
@@ -43,7 +43,7 @@ class ExtendNSTextFieldDelegateProxy
 class NSTextFieldSubclass
     : NSTextField
     , TestDelegateControl {
-    override func rx_createDelegateProxy() -> RxTextFieldDelegateProxy {
+    override func createRxDelegateProxy() -> RxTextFieldDelegateProxy {
         return ExtendNSTextFieldDelegateProxy(parentObject: self)
     }
 
@@ -51,9 +51,15 @@ class NSTextFieldSubclass
         (delegate as! NSTextFieldDelegateSubclass).testEventHappened?(value)
     }
 
-    var test: Observable<Int> {
-        return rx_delegate
-            .observe(#selector(NSTextFieldDelegateSubclass.testEventHappened(_:)))
+    var testSentMessage: Observable<Int> {
+        return rx.delegate
+            .sentMessage(#selector(NSTextFieldDelegateSubclass.testEventHappened(_:)))
+            .map { a in (a[0] as! NSNumber).intValue }
+    }
+
+    var testMethodInvoked: Observable<Int> {
+        return rx.delegate
+            .methodInvoked(#selector(NSTextFieldDelegateSubclass.testEventHappened(_:)))
             .map { a in (a[0] as! NSNumber).intValue }
     }
 

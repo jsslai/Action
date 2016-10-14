@@ -8,34 +8,34 @@
 
 import Foundation
 
-class WithLatestFromSink<FirstType, SecondType, ResultType, O: ObserverType where O.E == ResultType>
+class WithLatestFromSink<FirstType, SecondType, ResultType, O: ObserverType>
     : Sink<O>
     , ObserverType
     , LockOwnerType
-    , SynchronizedOnType {
+    , SynchronizedOnType where O.E == ResultType {
 
     typealias Parent = WithLatestFrom<FirstType, SecondType, ResultType>
     typealias E = FirstType
     
-    private let _parent: Parent
+    fileprivate let _parent: Parent
     
-    var _lock = RecursiveLock()
-    private var _latest: SecondType?
+    var _lock = NSRecursiveLock()
+    fileprivate var _latest: SecondType?
 
-    init(parent: Parent, observer: O) {
+    init(parent: Parent, observer: O, cancel: Cancelable) {
         _parent = parent
         
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
     
     func run() -> Disposable {
         let sndSubscription = SingleAssignmentDisposable()
         let sndO = WithLatestFromSecond(parent: self, disposable: sndSubscription)
         
-        sndSubscription.disposable = _parent._second.subscribe(sndO)
+        sndSubscription.setDisposable(_parent._second.subscribe(sndO))
         let fstSubscription = _parent._first.subscribe(self)
-        
-        return StableCompositeDisposable.create(fstSubscription, sndSubscription)
+
+        return Disposables.create(fstSubscription, sndSubscription)
     }
 
     func on(_ event: Event<E>) {
@@ -64,10 +64,10 @@ class WithLatestFromSink<FirstType, SecondType, ResultType, O: ObserverType wher
     }
 }
 
-class WithLatestFromSecond<FirstType, SecondType, ResultType, O: ObserverType where O.E == ResultType>
+class WithLatestFromSecond<FirstType, SecondType, ResultType, O: ObserverType>
     : ObserverType
     , LockOwnerType
-    , SynchronizedOnType {
+    , SynchronizedOnType where O.E == ResultType {
     
     typealias Parent = WithLatestFromSink<FirstType, SecondType, ResultType, O>
     typealias E = SecondType
@@ -75,7 +75,7 @@ class WithLatestFromSecond<FirstType, SecondType, ResultType, O: ObserverType wh
     private let _parent: Parent
     private let _disposable: Disposable
 
-    var _lock: RecursiveLock {
+    var _lock: NSRecursiveLock {
         return _parent._lock
     }
 
@@ -104,19 +104,19 @@ class WithLatestFromSecond<FirstType, SecondType, ResultType, O: ObserverType wh
 class WithLatestFrom<FirstType, SecondType, ResultType>: Producer<ResultType> {
     typealias ResultSelector = (FirstType, SecondType) throws -> ResultType
     
-    private let _first: Observable<FirstType>
-    private let _second: Observable<SecondType>
-    private let _resultSelector: ResultSelector
+    fileprivate let _first: Observable<FirstType>
+    fileprivate let _second: Observable<SecondType>
+    fileprivate let _resultSelector: ResultSelector
 
-    init(first: Observable<FirstType>, second: Observable<SecondType>, resultSelector: ResultSelector) {
+    init(first: Observable<FirstType>, second: Observable<SecondType>, resultSelector: @escaping ResultSelector) {
         _first = first
         _second = second
         _resultSelector = resultSelector
     }
     
-    override func run<O : ObserverType where O.E == ResultType>(_ observer: O) -> Disposable {
-        let sink = WithLatestFromSink(parent: self, observer: observer)
-        sink.disposable = sink.run()
-        return sink
+    override func run<O : ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == ResultType {
+        let sink = WithLatestFromSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = sink.run()
+        return (sink: sink, subscription: subscription)
     }
 }

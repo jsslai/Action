@@ -102,7 +102,7 @@ class GitHubSearchRepositoriesAPI {
     // Do we really want to make this example project factory/fascade/service competition? :)
     private let _wireframe: Wireframe
 
-    private let _reachabilityService: ReachabilityService
+    fileprivate let _reachabilityService: ReachabilityService
 
     private init(wireframe: Wireframe, reachabilityService: ReachabilityService) {
         _wireframe = wireframe
@@ -151,21 +151,21 @@ extension GitHubSearchRepositoriesAPI {
                     return Observable.just(appenedRepositories)
                 }
 
-                return [
+                return Observable.concat([
                     // return loaded immediately
                     Observable.just(appenedRepositories),
                     // wait until next page can be loaded
                     Observable.never().takeUntil(loadNextPageTrigger),
                     // load next page
                     self.recursivelySearch(loadedRepositories, loadNextURL: nextURL, loadNextPageTrigger: loadNextPageTrigger)
-                ].concat()
+                ])
             }
         }
     }
 
     private func loadSearchURL(_ searchURL: URL) -> Observable<SearchRepositoryResponse> {
         return URLSession.shared
-            .rx_response(URLRequest(url: searchURL))
+            .rx.response(URLRequest(url: searchURL))
             .retry(3)
             .trackActivity(self.activityIndicator)
             .observeOn(Dependencies.sharedDependencies.backgroundWorkScheduler)
@@ -195,18 +195,18 @@ extension GitHubSearchRepositoriesAPI {
 extension GitHubSearchRepositoriesAPI {
 
     private static let parseLinksPattern = "\\s*,?\\s*<([^\\>]*)>\\s*;\\s*rel=\"([^\"]*)\""
-    private static let linksRegex = try! RegularExpression(pattern: parseLinksPattern, options: [.allowCommentsAndWhitespace])
+    private static let linksRegex = try! NSRegularExpression(pattern: parseLinksPattern, options: [.allowCommentsAndWhitespace])
 
-    private static func parseLinks(_ links: String) throws -> [String: String] {
+    fileprivate static func parseLinks(_ links: String) throws -> [String: String] {
 
         let length = (links as NSString).length
-        let matches = GitHubSearchRepositoriesAPI.linksRegex.matches(in: links, options: RegularExpression.MatchingOptions(), range: NSRange(location: 0, length: length))
+        let matches = GitHubSearchRepositoriesAPI.linksRegex.matches(in: links, options: NSRegularExpression.MatchingOptions(), range: NSRange(location: 0, length: length))
 
         var result: [String: String] = [:]
 
         for m in matches {
             let matches = (1 ..< m.numberOfRanges).map { rangeIndex -> String in
-                let range = m.range(at: rangeIndex)
+                let range = m.rangeAt(rangeIndex)
                 let startIndex = links.characters.index(links.startIndex, offsetBy: range.location)
                 let endIndex = links.characters.index(links.startIndex, offsetBy: range.location + range.length)
                 let stringRange = startIndex ..< endIndex
@@ -223,7 +223,7 @@ extension GitHubSearchRepositoriesAPI {
         return result
     }
 
-    private static func parseNextURL(_ httpResponse: HTTPURLResponse) throws -> URL? {
+    fileprivate static func parseNextURL(_ httpResponse: HTTPURLResponse) throws -> URL? {
         guard let serializedLinks = httpResponse.allHeaderFields["Link"] as? String else {
             return nil
         }
@@ -241,21 +241,21 @@ extension GitHubSearchRepositoriesAPI {
         return nextUrl
     }
 
-    private static func parseJSON(_ httpResponse: HTTPURLResponse, data: Data) throws -> AnyObject {
+    fileprivate static func parseJSON(_ httpResponse: HTTPURLResponse, data: Data) throws -> AnyObject {
         if !(200 ..< 300 ~= httpResponse.statusCode) {
             throw exampleError("Call failed")
         }
 
-        return try JSONSerialization.jsonObject(with: data ?? Data(), options: [])
+        return try JSONSerialization.jsonObject(with: data, options: []) as AnyObject
     }
     
-    private static func parseRepositories(_ json: [String: AnyObject]) throws -> [Repository] {
+    fileprivate static func parseRepositories(_ json: [String: AnyObject]) throws -> [Repository] {
         guard let items = json["items"] as? [[String: AnyObject]] else {
             throw exampleError("Can't find items")
         }
         return try items.map { item in
             guard let name = item["name"] as? String,
-                    url = item["url"] as? String else {
+                let url = item["url"] as? String else {
                 throw exampleError("Can't parse repository")
             }
             return Repository(name: name, url: url)

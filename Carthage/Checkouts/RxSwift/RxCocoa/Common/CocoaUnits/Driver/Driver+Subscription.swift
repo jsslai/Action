@@ -14,7 +14,8 @@ import RxSwift
 private let driverErrorMessage = "`drive*` family of methods can be only called from `MainThread`.\n" +
 "This is required to ensure that the last replayed `Driver` element is delivered on `MainThread`.\n"
 
-extension DriverConvertibleType {
+// This would ideally be Driver, but unfortunatelly Driver can't be extended in Swift 3.0
+extension SharedSequenceConvertibleType where SharingStrategy == DriverSharingStrategy {
     /**
     Creates new subscription and sends elements to observer.
     This method can be only called from `MainThread`.
@@ -25,9 +26,9 @@ extension DriverConvertibleType {
     - returns: Disposable object that can be used to unsubscribe the observer from the subject.
     */
     // @warn_unused_result(message:"http://git.io/rxs.ud")
-    public func drive<O: ObserverType where O.E == E>(_ observer: O) -> Disposable {
+    public func drive<O: ObserverType>(_ observer: O) -> Disposable where O.E == E {
         MainScheduler.ensureExecutingOnScheduler(errorMessage: driverErrorMessage)
-        return self.asObservable().subscribe(observer)
+        return self.asSharedSequence().asObservable().subscribe(observer)
     }
 
     /**
@@ -105,9 +106,10 @@ extension DriverConvertibleType {
     - returns: Subscription object used to unsubscribe from the observable sequence.
     */
     // @warn_unused_result(message:"http://git.io/rxs.ud")
-    public func driveNext(_ onNext: (E) -> Void) -> Disposable {
+    @available(*, deprecated, renamed: "drive(onNext:)")
+    public func driveNext(_ onNext: @escaping (E) -> Void) -> Disposable {
         MainScheduler.ensureExecutingOnScheduler(errorMessage: driverErrorMessage)
-        return self.asObservable().subscribeNext(onNext)
+        return self.asObservable().subscribe(onNext: onNext)
     }
 }
 

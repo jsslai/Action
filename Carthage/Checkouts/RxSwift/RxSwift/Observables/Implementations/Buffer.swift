@@ -10,10 +10,10 @@ import Foundation
 
 class BufferTimeCount<Element> : Producer<[Element]> {
     
-    private let _timeSpan: RxTimeInterval
-    private let _count: Int
-    private let _scheduler: SchedulerType
-    private let _source: Observable<Element>
+    fileprivate let _timeSpan: RxTimeInterval
+    fileprivate let _count: Int
+    fileprivate let _scheduler: SchedulerType
+    fileprivate let _source: Observable<Element>
     
     init(source: Observable<Element>, timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType) {
         _source = source
@@ -22,38 +22,38 @@ class BufferTimeCount<Element> : Producer<[Element]> {
         _scheduler = scheduler
     }
     
-    override func run<O : ObserverType where O.E == [Element]>(_ observer: O) -> Disposable {
-        let sink = BufferTimeCountSink(parent: self, observer: observer)
-        sink.disposable = sink.run()
-        return sink
+    override func run<O : ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == [Element] {
+        let sink = BufferTimeCountSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = sink.run()
+        return (sink: sink, subscription: subscription)
     }
 }
 
-class BufferTimeCountSink<Element, O: ObserverType where O.E == [Element]>
+class BufferTimeCountSink<Element, O: ObserverType>
     : Sink<O>
     , LockOwnerType
     , ObserverType
-    , SynchronizedOnType {
+    , SynchronizedOnType where O.E == [Element] {
     typealias Parent = BufferTimeCount<Element>
     typealias E = Element
     
     private let _parent: Parent
     
-    let _lock = RecursiveLock()
+    let _lock = NSRecursiveLock()
     
     // state
     private let _timerD = SerialDisposable()
     private var _buffer = [Element]()
     private var _windowID = 0
     
-    init(parent: Parent, observer: O) {
+    init(parent: Parent, observer: O, cancel: Cancelable) {
         _parent = parent
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
  
     func run() -> Disposable {
         createTimer(_windowID)
-        return StableCompositeDisposable.create(_timerD, _parent._source.subscribe(self))
+        return Disposables.create(_timerD, _parent._source.subscribe(self))
     }
     
     func startNewWindowAndSendCurrentOne() {
@@ -92,7 +92,7 @@ class BufferTimeCountSink<Element, O: ObserverType where O.E == [Element]>
     }
     
     func createTimer(_ windowID: Int) {
-        if _timerD.disposed {
+        if _timerD.isDisposed {
             return
         }
         
@@ -104,7 +104,7 @@ class BufferTimeCountSink<Element, O: ObserverType where O.E == [Element]>
         
         _timerD.disposable = nextTimer
 
-        nextTimer.disposable = _parent._scheduler.scheduleRelative(windowID, dueTime: _parent._timeSpan) { previousWindowID in
+        let disposable = _parent._scheduler.scheduleRelative(windowID, dueTime: _parent._timeSpan) { previousWindowID in
             self._lock.performLocked {
                 if previousWindowID != self._windowID {
                     return
@@ -113,7 +113,9 @@ class BufferTimeCountSink<Element, O: ObserverType where O.E == [Element]>
                 self.startNewWindowAndSendCurrentOne()
             }
             
-            return NopDisposable.instance
+            return Disposables.create()
         }
+
+        nextTimer.setDisposable(disposable)
     }
 }

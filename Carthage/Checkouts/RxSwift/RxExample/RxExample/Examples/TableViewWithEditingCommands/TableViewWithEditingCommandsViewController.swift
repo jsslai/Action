@@ -33,13 +33,13 @@ struct TableViewEditingCommandsViewModel {
             return TableViewEditingCommandsViewModel(favoriteUsers: favoriteUsers, users: users)
         case let .deleteUser(indexPath):
             var all = [self.favoriteUsers, self.users]
-            all[(indexPath as NSIndexPath).section].remove(at: (indexPath as NSIndexPath).row)
+            all[indexPath.section].remove(at: indexPath.row)
             return TableViewEditingCommandsViewModel(favoriteUsers: all[0], users: all[1])
         case let .moveUser(from, to):
             var all = [self.favoriteUsers, self.users]
-            let user = all[(from as NSIndexPath).section][(from as NSIndexPath).row]
-            all[(from as NSIndexPath).section].remove(at: (from as NSIndexPath).row)
-            all[(to as NSIndexPath).section].insert(user, at: (to as NSIndexPath).row)
+            let user = all[from.section][from.row]
+            all[from.section].remove(at: from.row)
+            all[to.section].insert(user, at: to.row)
 
             return TableViewEditingCommandsViewModel(favoriteUsers: all[0], users: all[1])
         }
@@ -62,7 +62,7 @@ class TableViewWithEditingCommandsViewController: ViewController, UITableViewDel
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        self.navigationItem.rightBarButtonItem = self.editButtonItem()
+        self.navigationItem.rightBarButtonItem = self.editButtonItem
 
         let superMan =  User(
             firstName: "Super",
@@ -83,14 +83,9 @@ class TableViewWithEditingCommandsViewController: ViewController, UITableViewDel
                 .concat(loadFavoriteUsers)
                 .observeOn(MainScheduler.instance)
 
-        let deleteUserCommand = tableView.rx_itemDeleted.map(TableViewEditingCommand.deleteUser)
+        let deleteUserCommand = tableView.rx.itemDeleted.map(TableViewEditingCommand.deleteUser)
         let moveUserCommand = tableView
-            .rx_itemMoved
-            // This is needed because rx_itemMoved is being performed before delegate method is
-            // delegated to RxDataSource.
-            // This observeOn makes sure data is rebound after automatic move is performed in data source.
-            // This will be improved in RxSwift 3.0 when order will be inversed.
-            .observeOn(MainScheduler.asyncInstance)
+            .rx.itemMoved
             .map(TableViewEditingCommand.moveUser)
 
         let initialState = TableViewEditingCommandsViewModel(favoriteUsers: [], users: [])
@@ -107,22 +102,22 @@ class TableViewWithEditingCommandsViewController: ViewController, UITableViewDel
                     SectionModel(model: "Normal Users", items: $0.users)
                 ]
             }
-            .bindTo(tableView.rx_itemsWithDataSource(dataSource))
+            .bindTo(tableView.rx.items(dataSource: dataSource))
             .addDisposableTo(disposeBag)
 
-        tableView.rx_itemSelected
+        tableView.rx.itemSelected
             .withLatestFrom(viewModel) { i, viewModel in
                 let all = [viewModel.favoriteUsers, viewModel.users]
                 return all[i.section][i.row]
             }
-            .subscribeNext { [weak self] user in
+            .subscribe(onNext: { [weak self] user in
                 self?.showDetailsForUser(user)
-            }
+            })
             .addDisposableTo(disposeBag)
 
         // customization using delegate
         // RxTableViewDelegateBridge will forward correct messages
-        tableView.rx_setDelegate(self)
+        tableView.rx.setDelegate(self)
             .addDisposableTo(disposeBag)
     }
 
@@ -139,8 +134,8 @@ class TableViewWithEditingCommandsViewController: ViewController, UITableViewDel
         let label = UILabel(frame: CGRect.zero)
         // hacky I know :)
         label.text = "  \(title)"
-        label.textColor = UIColor.white()
-        label.backgroundColor = UIColor.darkGray()
+        label.textColor = UIColor.white
+        label.backgroundColor = UIColor.darkGray
         label.alpha = 0.9
 
         return label

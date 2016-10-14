@@ -18,22 +18,22 @@ enum TailRecursiveSinkCommand {
 #endif
 
 /// This class is usually used with `Generator` version of the operators.
-class TailRecursiveSink<S: Sequence, O: ObserverType where S.Iterator.Element: ObservableConvertibleType, S.Iterator.Element.E == O.E>
+class TailRecursiveSink<S: Sequence, O: ObserverType>
     : Sink<O>
-    , InvocableWithValueType {
+    , InvocableWithValueType where S.Iterator.Element: ObservableConvertibleType, S.Iterator.Element.E == O.E {
     typealias Value = TailRecursiveSinkCommand
     typealias E = O.E
     typealias SequenceGenerator = (generator: S.Iterator, remaining: IntMax?)
 
     var _generators: [SequenceGenerator] = []
-    var _disposed = false
+    var _isDisposed = false
     var _subscription = SerialDisposable()
 
     // this is thread safe object
     var _gate = AsyncLock<InvocableScheduledItem<TailRecursiveSink<S, O>>>()
 
-    override init(observer: O) {
-        super.init(observer: observer)
+    override init(observer: O, cancel: Cancelable) {
+        super.init(observer: observer, cancel: cancel)
     }
 
     func run(_ sources: SequenceGenerator) -> Disposable {
@@ -77,7 +77,7 @@ class TailRecursiveSink<S: Sequence, O: ObserverType where S.Iterator.Element: O
                 break
             }
             
-            if _disposed {
+            if _isDisposed {
                 return
             }
 
@@ -129,7 +129,7 @@ class TailRecursiveSink<S: Sequence, O: ObserverType where S.Iterator.Element: O
 
         let disposable = SingleAssignmentDisposable()
         _subscription.disposable = disposable
-        disposable.disposable = subscribeToNext(next!)
+        disposable.setDisposable(subscribeToNext(next!))
     }
 
     func subscribeToNext(_ source: Observable<E>) -> Disposable {
@@ -137,7 +137,7 @@ class TailRecursiveSink<S: Sequence, O: ObserverType where S.Iterator.Element: O
     }
 
     func disposeCommand() {
-        _disposed = true
+        _isDisposed = true
         _generators.removeAll(keepingCapacity: false)
     }
 

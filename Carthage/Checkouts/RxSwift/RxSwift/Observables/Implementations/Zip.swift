@@ -11,7 +11,7 @@ import Foundation
 protocol ZipSinkProtocol : class
 {
     func next(_ index: Int)
-    func fail(_ error: ErrorProtocol)
+    func fail(_ error: Swift.Error)
     func done(_ index: Int)
 }
 
@@ -20,16 +20,16 @@ class ZipSink<O: ObserverType> : Sink<O>, ZipSinkProtocol {
     
     let _arity: Int
 
-    let _lock = RecursiveLock()
+    let _lock = NSRecursiveLock()
 
     // state
     private var _isDone: [Bool]
     
-    init(arity: Int, observer: O) {
+    init(arity: Int, observer: O, cancel: Cancelable) {
         _isDone = [Bool](repeating: false, count: arity)
         _arity = arity
         
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
 
     func getResult() throws -> Element {
@@ -78,7 +78,7 @@ class ZipSink<O: ObserverType> : Sink<O>, ZipSinkProtocol {
         }
     }
     
-    func fail(_ error: ErrorProtocol) {
+    func fail(_ error: Swift.Error) {
         forwardOn(.error(error))
         dispose()
     }
@@ -111,14 +111,14 @@ class ZipObserver<ElementType>
 
     private var _parent: ZipSinkProtocol?
     
-    let _lock: RecursiveLock
+    let _lock: NSRecursiveLock
     
     // state
     private let _index: Int
     private let _this: Disposable
     private let _setNextValue: ValueSetter
     
-    init(lock: RecursiveLock, parent: ZipSinkProtocol, index: Int, setNextValue: ValueSetter, this: Disposable) {
+    init(lock: NSRecursiveLock, parent: ZipSinkProtocol, index: Int, setNextValue: @escaping ValueSetter, this: Disposable) {
         _lock = lock
         _parent = parent
         _index = index

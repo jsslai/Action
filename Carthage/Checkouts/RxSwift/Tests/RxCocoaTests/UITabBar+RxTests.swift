@@ -31,10 +31,10 @@ extension UITabBarTests {
         let items = [UITabBarItem()]
         var returnedItems: [UITabBarItem]!
 
-        _ = subject.rx_willBeginCustomizing
-            .subscribeNext { i in
+        _ = subject.rx.willBeginCustomizing
+            .subscribe(onNext: { i in
                 returnedItems = i
-            }
+            })
         subject.delegate!.tabBar!(subject, willBeginCustomizing: items)
 
         XCTAssertEqual(returnedItems, items)
@@ -46,10 +46,10 @@ extension UITabBarTests {
         let items = [UITabBarItem()]
         var returnedItems: [UITabBarItem]!
 
-        _ = subject.rx_didBeginCustomizing
-            .subscribeNext { i in
+        _ = subject.rx.didBeginCustomizing
+            .subscribe(onNext: { i in
                 returnedItems = i
-            }
+            })
 
         subject.delegate!.tabBar!(subject, didBeginCustomizing: items)
 
@@ -63,11 +63,11 @@ extension UITabBarTests {
         var returnedItems: [UITabBarItem]!
         var changed: Bool!
 
-        _ = subject.rx_willEndCustomizing
-            .subscribeNext { (i, c) in
+        _ = subject.rx.willEndCustomizing
+            .subscribe(onNext: { (i, c) in
                 returnedItems = i
                 changed = c
-            }
+            })
         subject.delegate!.tabBar!(subject, willEndCustomizing: items, changed: true)
 
         XCTAssertEqual(returnedItems, items)
@@ -81,11 +81,11 @@ extension UITabBarTests {
         var returnedItems: [UITabBarItem]!
         var changed: Bool!
 
-        _ = subject.rx_didEndCustomizing
-            .subscribeNext { (i, c) in
+        _ = subject.rx.didEndCustomizing
+            .subscribe(onNext: { (i, c) in
                 returnedItems = i
                 changed = c
-            }
+            })
 
         subject.delegate!.tabBar!(subject, didEndCustomizing: items, changed: true)
 
@@ -107,10 +107,10 @@ extension UITabBarTests {
         let item = UITabBarItem()
         var returnedItem: UITabBarItem!
 
-        _ = subject.rx_didSelectItem
-            .subscribeNext { i in
+        _ = subject.rx.didSelectItem
+            .subscribe(onNext: { i in
                 returnedItem = i
-            }
+            })
         
         subject.delegate!.tabBar!(subject, didSelect: item)
         

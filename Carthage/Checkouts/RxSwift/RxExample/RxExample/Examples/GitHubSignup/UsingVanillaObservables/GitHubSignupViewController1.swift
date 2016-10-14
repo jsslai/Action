@@ -31,10 +31,10 @@ class GitHubSignupViewController1 : ViewController {
 
         let viewModel = GithubSignupViewModel1(
             input: (
-                username: usernameOutlet.rx_text.asObservable(),
-                password: passwordOutlet.rx_text.asObservable(),
-                repeatedPassword: repeatedPasswordOutlet.rx_text.asObservable(),
-                loginTaps: signupOutlet.rx_tap.asObservable()
+                username: usernameOutlet.rx.text.asObservable(),
+                password: passwordOutlet.rx.text.asObservable(),
+                repeatedPassword: repeatedPasswordOutlet.rx.text.asObservable(),
+                loginTaps: signupOutlet.rx.tap.asObservable()
             ),
             dependency: (
                 API: GitHubDefaultAPI.sharedAPI,
@@ -45,40 +45,40 @@ class GitHubSignupViewController1 : ViewController {
 
         // bind results to  {
         viewModel.signupEnabled
-            .subscribeNext { [weak self] valid  in
+            .subscribe(onNext: { [weak self] valid  in
                 self?.signupOutlet.isEnabled = valid
                 self?.signupOutlet.alpha = valid ? 1.0 : 0.5
-            }
+            })
             .addDisposableTo(disposeBag)
 
         viewModel.validatedUsername
-            .bindTo(usernameValidationOutlet.ex_validationResult)
+            .bindTo(usernameValidationOutlet.rx.validationResult)
             .addDisposableTo(disposeBag)
 
         viewModel.validatedPassword
-            .bindTo(passwordValidationOutlet.ex_validationResult)
+            .bindTo(passwordValidationOutlet.rx.validationResult)
             .addDisposableTo(disposeBag)
 
         viewModel.validatedPasswordRepeated
-            .bindTo(repeatedPasswordValidationOutlet.ex_validationResult)
+            .bindTo(repeatedPasswordValidationOutlet.rx.validationResult)
             .addDisposableTo(disposeBag)
 
         viewModel.signingIn
-            .bindTo(signingUpOulet.rx_animating)
+            .bindTo(signingUpOulet.rx.animating)
             .addDisposableTo(disposeBag)
 
         viewModel.signedIn
-            .subscribeNext { signedIn in
+            .subscribe(onNext: { signedIn in
                 print("User signed in \(signedIn)")
-            }
+            })
             .addDisposableTo(disposeBag)
         //}
 
         let tapBackground = UITapGestureRecognizer()
-        tapBackground.rx_event
-            .subscribeNext { [weak self] _ in
+        tapBackground.rx.event
+            .subscribe(onNext: { [weak self] _ in
                 self?.view.endEditing(true)
-            }
+            })
             .addDisposableTo(disposeBag)
         view.addGestureRecognizer(tapBackground)
     }

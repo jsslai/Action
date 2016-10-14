@@ -29,10 +29,10 @@ class DefaultImageService: ImageService {
     let $: Dependencies = Dependencies.sharedDependencies
 
     // 1st level cache
-    private let _imageCache = Cache<AnyObject, AnyObject>()
+    private let _imageCache = NSCache<AnyObject, AnyObject>()
 
     // 2nd level cache
-    private let _imageDataCache = Cache<AnyObject, AnyObject>()
+    private let _imageDataCache = NSCache<AnyObject, AnyObject>()
 
     let loadingImage = ActivityIndicator()
     
@@ -57,7 +57,7 @@ class DefaultImageService: ImageService {
     
     private func _imageFromURL(_ url: URL) -> Observable<Image> {
         return Observable.deferred {
-                let maybeImage = self._imageCache.object(forKey: url) as? Image
+                let maybeImage = self._imageCache.object(forKey: url as AnyObject) as? Image
 
                 let decodedImage: Observable<Image>
                 
@@ -66,7 +66,7 @@ class DefaultImageService: ImageService {
                     decodedImage = Observable.just(image)
                 }
                 else {
-                    let cachedData = self._imageDataCache.object(forKey: url) as? Data
+                    let cachedData = self._imageDataCache.object(forKey: url as AnyObject) as? Data
                     
                     // does image data cache contain anything
                     if let cachedData = cachedData {
@@ -74,18 +74,18 @@ class DefaultImageService: ImageService {
                     }
                     else {
                         // fetch from network
-                        decodedImage = self.$.URLSession.rx_data(URLRequest(url: url))
-                            .doOnNext { data in
-                                self._imageDataCache.setObject(data, forKey: url)
-                            }
+                        decodedImage = self.$.URLSession.rx.data(URLRequest(url: url))
+                            .do(onNext: { data in
+                                self._imageDataCache.setObject(data as AnyObject, forKey: url as AnyObject)
+                            })
                             .flatMap(self.decodeImage)
                             .trackActivity(self.loadingImage)
                     }
                 }
                 
-                return decodedImage.doOnNext { image in
-                    self._imageCache.setObject(image, forKey: url)
-                }
+                return decodedImage.do(onNext: { image in
+                    self._imageCache.setObject(image, forKey: url as AnyObject)
+                })
             }
     }
 

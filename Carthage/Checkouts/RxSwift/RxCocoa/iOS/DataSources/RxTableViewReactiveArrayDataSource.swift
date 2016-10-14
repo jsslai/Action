@@ -31,7 +31,7 @@ class _RxTableViewReactiveArrayDataSource
         return _tableView(tableView, numberOfRowsInSection: section)
     }
 
-    private func _tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    fileprivate func _tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         rxAbstractMethod()
     }
 
@@ -46,7 +46,7 @@ class RxTableViewReactiveArrayDataSourceSequenceWrapper<S: Sequence>
     , RxTableViewDataSourceType {
     typealias Element = S
 
-    override init(cellFactory: CellFactory) {
+    override init(cellFactory: @escaping CellFactory) {
         super.init(cellFactory: cellFactory)
     }
 
@@ -70,9 +70,9 @@ class RxTableViewReactiveArrayDataSource<Element>
         return itemModels?[index]
     }
 
-    func modelAtIndexPath(_ indexPath: IndexPath) throws -> Any {
-        precondition((indexPath as NSIndexPath).section == 0)
-        guard let item = itemModels?[(indexPath as NSIndexPath).item] else {
+    func model(_ indexPath: IndexPath) throws -> Any {
+        precondition(indexPath.section == 0)
+        guard let item = itemModels?[indexPath.item] else {
             throw RxCocoaError.itemsNotYetBound(object: self)
         }
         return item
@@ -80,7 +80,7 @@ class RxTableViewReactiveArrayDataSource<Element>
 
     let cellFactory: CellFactory
     
-    init(cellFactory: CellFactory) {
+    init(cellFactory: @escaping CellFactory) {
         self.cellFactory = cellFactory
     }
     
@@ -89,7 +89,7 @@ class RxTableViewReactiveArrayDataSource<Element>
     }
     
     override func _tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        return cellFactory(tableView, (indexPath as NSIndexPath).item, itemModels![(indexPath as NSIndexPath).row])
+        return cellFactory(tableView, indexPath.item, itemModels![indexPath.row])
     }
     
     // reactive

@@ -32,7 +32,7 @@ class _RxCollectionViewReactiveArrayDataSource
         return _collectionView(collectionView, numberOfItemsInSection: section)
     }
 
-    private func _collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    fileprivate func _collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         rxAbstractMethod()
     }
 
@@ -46,7 +46,7 @@ class RxCollectionViewReactiveArrayDataSourceSequenceWrapper<S: Sequence>
     , RxCollectionViewDataSourceType {
     typealias Element = S
 
-    override init(cellFactory: CellFactory) {
+    override init(cellFactory: @escaping CellFactory) {
         super.init(cellFactory: cellFactory)
     }
     
@@ -72,9 +72,9 @@ class RxCollectionViewReactiveArrayDataSource<Element>
         return itemModels?[index]
     }
 
-    func modelAtIndexPath(_ indexPath: IndexPath) throws -> Any {
-        precondition((indexPath as NSIndexPath).section == 0)
-        guard let item = itemModels?[(indexPath as NSIndexPath).item] else {
+    func model(_ indexPath: IndexPath) throws -> Any {
+        precondition(indexPath.section == 0)
+        guard let item = itemModels?[indexPath.item] else {
             throw RxCocoaError.itemsNotYetBound(object: self)
         }
         return item
@@ -82,7 +82,7 @@ class RxCollectionViewReactiveArrayDataSource<Element>
     
     var cellFactory: CellFactory
     
-    init(cellFactory: CellFactory) {
+    init(cellFactory: @escaping CellFactory) {
         self.cellFactory = cellFactory
     }
     
@@ -93,7 +93,7 @@ class RxCollectionViewReactiveArrayDataSource<Element>
     }
     
     override func _collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        return cellFactory(collectionView, (indexPath as NSIndexPath).item, itemModels![(indexPath as NSIndexPath).item])
+        return cellFactory(collectionView, indexPath.item, itemModels![indexPath.item])
     }
     
     // reactive

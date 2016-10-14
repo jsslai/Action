@@ -18,31 +18,33 @@ extension ObserverTests {
         var observer: AnyObserver<Int>!
         let a: Observable<Int> = Observable.create { o in
             observer = o
-            return NopDisposable.instance
+            return Disposables.create()
         }
 
         var elements = [Int]()
 
-        _ = a.subscribeNext { n in
+        let subscription = a.subscribe(onNext: { n in
             elements.append(n)
-        }
+        })
 
         XCTAssertEqual(elements, [])
 
         observer.onNext(0)
 
         XCTAssertEqual(elements, [0])
+
+        subscription.dispose()
     }
 
     func testConvenienceOn_Error() {
         var observer: AnyObserver<Int>!
         let a: Observable<Int> = Observable.create { o in
             observer = o
-            return NopDisposable.instance
+            return Disposables.create()
         }
 
         var elements = [Int]()
-        var errorNotification: ErrorProtocol!
+        var errorNotification: Swift.Error!
 
         _ = a.subscribe(
             onNext: { n in elements.append(n) },
@@ -67,14 +69,14 @@ extension ObserverTests {
         var observer: AnyObserver<Int>!
         let a: Observable<Int> = Observable.create { o in
             observer = o
-            return NopDisposable.instance
+            return Disposables.create()
         }
 
         var elements = [Int]()
 
-        _ = a.subscribeNext { n in
+        _ = a.subscribe(onNext: { n in
             elements.append(n)
-        }
+        })
 
         XCTAssertEqual(elements, [])
 

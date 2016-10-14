@@ -8,14 +8,14 @@
 
 import Foundation
 
-class CombineLatestCollectionTypeSink<C: Collection, R, O: ObserverType where C.Iterator.Element : ObservableConvertibleType, O.E == R>
-    : Sink<O> {
+class CombineLatestCollectionTypeSink<C: Collection, R, O: ObserverType>
+    : Sink<O> where C.Iterator.Element : ObservableConvertibleType, O.E == R {
     typealias Parent = CombineLatestCollectionType<C, R>
     typealias SourceElement = C.Iterator.Element.E
     
     let _parent: Parent
     
-    let _lock = RecursiveLock()
+    let _lock = NSRecursiveLock()
 
     // state
     var _numberOfValues = 0
@@ -24,7 +24,7 @@ class CombineLatestCollectionTypeSink<C: Collection, R, O: ObserverType where C.
     var _numberOfDone = 0
     var _subscriptions: [SingleAssignmentDisposable]
     
-    init(parent: Parent, observer: O) {
+    init(parent: Parent, observer: O, cancel: Cancelable) {
         _parent = parent
         _values = [SourceElement?](repeating: nil, count: parent._count)
         _isDone = [Bool](repeating: false, count: parent._count)
@@ -35,7 +35,7 @@ class CombineLatestCollectionTypeSink<C: Collection, R, O: ObserverType where C.
             _subscriptions.append(SingleAssignmentDisposable())
         }
         
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
     
     func on(_ event: Event<SourceElement>, atIndex: Int) {
@@ -93,33 +93,35 @@ class CombineLatestCollectionTypeSink<C: Collection, R, O: ObserverType where C.
         for i in _parent._sources {
             let index = j
             let source = i.asObservable()
-            _subscriptions[j].disposable = source.subscribe(AnyObserver { event in
+            let disposable = source.subscribe(AnyObserver { event in
                 self.on(event, atIndex: index)
             })
+
+            _subscriptions[j].setDisposable(disposable)
             
             j += 1
         }
         
-        return CompositeDisposable(disposables: _subscriptions.map { $0 })
+        return Disposables.create(_subscriptions)
     }
 }
 
-class CombineLatestCollectionType<C: Collection, R where C.Iterator.Element : ObservableConvertibleType> : Producer<R> {
+class CombineLatestCollectionType<C: Collection, R> : Producer<R> where C.Iterator.Element : ObservableConvertibleType {
     typealias ResultSelector = ([C.Iterator.Element.E]) throws -> R
     
     let _sources: C
     let _resultSelector: ResultSelector
     let _count: Int
 
-    init(sources: C, resultSelector: ResultSelector) {
+    init(sources: C, resultSelector: @escaping ResultSelector) {
         _sources = sources
         _resultSelector = resultSelector
         _count = Int(self._sources.count.toIntMax())
     }
     
-    override func run<O : ObserverType where O.E == R>(_ observer: O) -> Disposable {
-        let sink = CombineLatestCollectionTypeSink(parent: self, observer: observer)
-        sink.disposable = sink.run()
-        return sink
+    override func run<O : ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == R {
+        let sink = CombineLatestCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = sink.run()
+        return (sink: sink, subscription: subscription)
     }
 }

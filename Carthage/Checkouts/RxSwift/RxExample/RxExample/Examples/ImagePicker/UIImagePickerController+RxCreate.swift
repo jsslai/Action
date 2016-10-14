@@ -14,7 +14,7 @@ import UIKit
 #endif
 
 func dismissViewController(_ viewController: UIViewController, animated: Bool) {
-    if viewController.isBeingDismissed() || viewController.isBeingPresented() {
+    if viewController.isBeingDismissed || viewController.isBeingPresented {
         DispatchQueue.main.async {
             dismissViewController(viewController, animated: animated)
         }
@@ -27,13 +27,13 @@ func dismissViewController(_ viewController: UIViewController, animated: Bool) {
     }
 }
 
-extension UIImagePickerController {
-    static func rx_createWithParent(_ parent: UIViewController?, animated: Bool = true, configureImagePicker: (UIImagePickerController) throws -> () = { x in }) -> Observable<UIImagePickerController> {
+extension Reactive where Base: UIImagePickerController {
+    static func createWithParent(_ parent: UIViewController?, animated: Bool = true, configureImagePicker: @escaping (UIImagePickerController) throws -> () = { x in }) -> Observable<UIImagePickerController> {
         return Observable.create { [weak parent] observer in
             let imagePicker = UIImagePickerController()
-            let dismissDisposable = imagePicker
-                .rx_didCancel
-                .subscribeNext({ [weak imagePicker] in
+            let dismissDisposable = imagePicker.rx
+                .didCancel
+                .subscribe(onNext: { [weak imagePicker] in
                     guard let imagePicker = imagePicker else {
                         return
                     }
@@ -45,18 +45,18 @@ extension UIImagePickerController {
             }
             catch let error {
                 observer.on(.error(error))
-                return NopDisposable.instance
+                return Disposables.create()
             }
 
             guard let parent = parent else {
                 observer.on(.completed)
-                return NopDisposable.instance
+                return Disposables.create()
             }
 
             parent.present(imagePicker, animated: animated, completion: nil)
             observer.on(.next(imagePicker))
             
-            return CompositeDisposable(dismissDisposable, AnonymousDisposable {
+            return Disposables.create(dismissDisposable, Disposables.create {
                     dismissViewController(imagePicker, animated: animated)
                 })
         }

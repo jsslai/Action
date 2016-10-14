@@ -8,12 +8,12 @@
 
 import Foundation
 
-var mallocFunctions: [(@convention(c) (UnsafeMutablePointer<_malloc_zone_t>?, Int) -> UnsafeMutablePointer<Void>?)] = []
+var mallocFunctions: [(@convention(c) (UnsafeMutablePointer<_malloc_zone_t>?, Int) -> UnsafeMutableRawPointer?)] = []
 
 var allocCalls: Int64 = 0
 var bytesAllocated: Int64 = 0
 
-func call0(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutablePointer<Void>? {
+func call0(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutableRawPointer? {
     OSAtomicIncrement64(&allocCalls)
     OSAtomicAdd64(Int64(size), &bytesAllocated)
 #if ALLOC_HOOK
@@ -22,7 +22,7 @@ func call0(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutab
     return mallocFunctions[0](p, size)
 }
 
-func call1(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutablePointer<Void>? {
+func call1(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutableRawPointer? {
     OSAtomicIncrement64(&allocCalls)
     OSAtomicAdd64(Int64(size), &bytesAllocated)
 #if ALLOC_HOOK
@@ -31,7 +31,7 @@ func call1(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutab
     return mallocFunctions[1](p, size)
 }
 
-func call2(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutablePointer<Void>? {
+func call2(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutableRawPointer? {
     OSAtomicIncrement64(&allocCalls)
     OSAtomicAdd64(Int64(size), &bytesAllocated)
 #if ALLOC_HOOK
@@ -40,7 +40,7 @@ func call2(_ p: UnsafeMutablePointer<_malloc_zone_t>?, size: Int) -> UnsafeMutab
     return mallocFunctions[2](p, size)
 }
 
-var proxies: [(@convention(c) (UnsafeMutablePointer<_malloc_zone_t>?, Int) -> UnsafeMutablePointer<Void>?)] = [call0, call1, call2]
+var proxies: [(@convention(c) (UnsafeMutablePointer<_malloc_zone_t>?, Int) -> UnsafeMutableRawPointer?)] = [call0, call1, call2]
 
 func getMemoryInfo() -> (bytes: Int64, allocations: Int64) {
     return (bytesAllocated, allocCalls)
@@ -55,43 +55,47 @@ func registerMallocHooks() {
 
     registeredMallocHooks = true
 
-    var _zones: UnsafeMutablePointer<vm_address_t>? = UnsafeMutablePointer(nil)
+    var _zones: UnsafeMutablePointer<vm_address_t>?
     var count: UInt32 = 0
 
     // malloc_zone_print(nil, 1)
     let res = malloc_get_all_zones(mach_task_self_, nil, &_zones, &count)
     assert(res == 0)
 
-    let zones = UnsafeMutablePointer<UnsafeMutablePointer<malloc_zone_t>>(_zones)
-
-    assert(Int(count) <= proxies.count)
-
-    for i in 0 ..< Int(count) {
-        let zoneArray = zones!.advanced(by: i)
-        let name = malloc_get_zone_name(zoneArray.pointee)
-        var zone = zoneArray.pointee.pointee
-
-        //print(String.fromCString(name))
-
-        assert(name != nil)
-        mallocFunctions.append(zone.malloc)
-        zone.malloc = proxies[i]
-
-        let protectSize = vm_size_t(sizeof(malloc_zone_t.self)) * vm_size_t(count)
-
-        if true {
-            let addressPointer = UnsafeMutablePointer<vm_address_t>(zoneArray)
-            let res = vm_protect(mach_task_self_, addressPointer.pointee, protectSize, 0, PROT_READ | PROT_WRITE)
-            assert(res == 0)
+    _zones?.withMemoryRebound(to: UnsafeMutablePointer<malloc_zone_t>.self, capacity: Int(count), { zones in
+        
+        assert(Int(count) <= proxies.count)
+        
+        for i in 0 ..< Int(count) {
+            let zoneArray = zones.advanced(by: i)
+            let name = malloc_get_zone_name(zoneArray.pointee)
+            var zone = zoneArray.pointee.pointee
+            
+            //print(String.fromCString(name))
+            
+            assert(name != nil)
+            mallocFunctions.append(zone.malloc)
+            zone.malloc = proxies[i]
+            
+            let protectSize = vm_size_t(MemoryLayout<malloc_zone_t>.size) * vm_size_t(count)
+            
+            if true {
+                zoneArray.withMemoryRebound(to: vm_address_t.self, capacity: Int(protectSize), { addressPointer in
+                    let res = vm_protect(mach_task_self_, addressPointer.pointee, protectSize, 0, PROT_READ | PROT_WRITE)
+                    assert(res == 0)
+                })
+            }
+            
+            zoneArray.pointee.pointee = zone
+            
+            if true {
+                let res = vm_protect(mach_task_self_, _zones!.pointee, protectSize, 0, PROT_READ)
+                assert(res == 0)
+            }
         }
+        
+    })
 
-        zoneArray.pointee.pointee = zone
-
-        if true {
-            let res = vm_protect(mach_task_self_, _zones!.pointee, protectSize, 0, PROT_READ)
-            assert(res == 0)
-        }
-    }
 }
 
 // MARK: Benchmark tools
@@ -132,7 +136,7 @@ func approxValuePerIteration(_ total: UInt64) -> UInt64 {
     return UInt64(round(Double(total) / Double(NumberOfIterations)))
 }
 
-func measureTime(_ work: @noescape () -> ()) -> UInt64 {
+func measureTime(_ work: () -> ()) -> UInt64 {
     var timebaseInfo: mach_timebase_info = mach_timebase_info()
     let res = mach_timebase_info(&timebaseInfo)
 
@@ -147,7 +151,7 @@ func measureTime(_ work: @noescape () -> ()) -> UInt64 {
     return approxValuePerIteration(timeInNano) / 1000
 }
 
-func measureMemoryUsage(work: @noescape () -> ()) -> (bytesAllocated: UInt64, allocations: UInt64) {
+func measureMemoryUsage(work: () -> ()) -> (bytesAllocated: UInt64, allocations: UInt64) {
     let (bytes, allocations) = getMemoryInfo()
     for _ in 0 ..< NumberOfIterations {
         work()
@@ -159,7 +163,7 @@ func measureMemoryUsage(work: @noescape () -> ()) -> (bytesAllocated: UInt64, al
 
 var fragmentedMemory = false
 
-func compareTwoImplementations(benchmarkTime: Bool, benchmarkMemory: Bool, first: @noescape () -> (), second: @noescape () -> ()) {
+func compareTwoImplementations(benchmarkTime: Bool, benchmarkMemory: Bool, first: () -> (), second: () -> ()) {
     if !fragmentedMemory {
         print("Fragmenting memory ...")
         fragmentMemory()

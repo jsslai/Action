@@ -14,9 +14,9 @@ class DistinctUntilChangedSink<O: ObserverType, Key>: Sink<O>, ObserverType {
     private let _parent: DistinctUntilChanged<E, Key>
     private var _currentKey: Key? = nil
     
-    init(parent: DistinctUntilChanged<E, Key>, observer: O) {
+    init(parent: DistinctUntilChanged<E, Key>, observer: O, cancel: Cancelable) {
         _parent = parent
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
     
     func on(_ event: Event<E>) {
@@ -52,19 +52,19 @@ class DistinctUntilChanged<Element, Key>: Producer<Element> {
     typealias KeySelector = (Element) throws -> Key
     typealias EqualityComparer = (Key, Key) throws -> Bool
     
-    private let _source: Observable<Element>
-    private let _selector: KeySelector
-    private let _comparer: EqualityComparer
+    fileprivate let _source: Observable<Element>
+    fileprivate let _selector: KeySelector
+    fileprivate let _comparer: EqualityComparer
     
-    init(source: Observable<Element>, selector: KeySelector, comparer: EqualityComparer) {
+    init(source: Observable<Element>, selector: @escaping KeySelector, comparer: @escaping EqualityComparer) {
         _source = source
         _selector = selector
         _comparer = comparer
     }
     
-    override func run<O: ObserverType where O.E == Element>(_ observer: O) -> Disposable {
-        let sink = DistinctUntilChangedSink(parent: self, observer: observer)
-        sink.disposable = _source.subscribe(sink)
-        return sink
+    override func run<O: ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == Element {
+        let sink = DistinctUntilChangedSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = _source.subscribe(sink)
+        return (sink: sink, subscription: subscription)
     }
 }

@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import CoreData
 #if !RX_NO_MODULE
 import RxSwift
 import RxCocoa
@@ -62,9 +61,9 @@ public struct Changeset<S: SectionModelType> {
 
     public static func initialValue(_ sections: [S]) -> Changeset<S> {
         return Changeset<S>(
-            insertedSections: Array(0 ..< sections.count) as [Int],
+            reloadData: true,
             finalSections: sections,
-            reloadData: true
+            insertedSections: Array(0 ..< sections.count) as [Int]
         )
     }
 }

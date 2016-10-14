@@ -32,11 +32,11 @@ All of these various systems makes our code needlessly complex. Wouldn't it be b
  * `ObservableType.subscribe(_:)` takes an observer (`ObserverType`) parameter, which will be subscribed to automatically receive sequence events and elements emitted by the `Observable`, instead of manually calling `next()` on the returned generator.
  */
 /*:
- If an `Observable` emits a Next event (`Event.Next(Element)`), it can continue to emit more events. However, if the `Observable` emits either an Error event (`Event.Error(ErrorType)`) or a Completed event (`Event.Completed`), the `Observable` sequence cannot emit additional events to the subscriber.
+ If an `Observable` emits a next event (`Event.next(Element)`), it can continue to emit more events. However, if the `Observable` emits either an error event (`Event.error(ErrorType)`) or a completed event (`Event.completed`), the `Observable` sequence cannot emit additional events to the subscriber.
 
  Sequence grammar explains this more concisely:
 
- `Next* (Error | Completed)?`
+ `next* (error | completed)?`
 
  And this can also be explained more visually using diagrams:
 
@@ -46,7 +46,7 @@ All of these various systems makes our code needlessly complex. Wouldn't it be b
 
  `--tap--tap----------tap--> // "|" = Continues indefinitely, such as a sequence of button taps`
 
- > These diagrams are call marble diagrams. You can learn more about them at [RxMarbles.com](http://rxmarbles.com).
+ > These diagrams are called marble diagrams. You can learn more about them at [RxMarbles.com](http://rxmarbles.com).
 */
 /*:
  ### Observables and observers (aka subscribers)
@@ -58,7 +58,7 @@ example("Observable with no subscribers") {
         print("This will never be printed")
         observerOfString.on(.next("😬"))
         observerOfString.on(.completed)
-        return NopDisposable.instance
+        return Disposables.create()
     }
 }
 /*:
@@ -70,7 +70,7 @@ example("Observable with subscriber") {
             print("Observable created")
             observerOfString.on(.next("😉"))
             observerOfString.on(.completed)
-            return NopDisposable.instance
+            return Disposables.create()
         }
         .subscribe { event in
             print(event)

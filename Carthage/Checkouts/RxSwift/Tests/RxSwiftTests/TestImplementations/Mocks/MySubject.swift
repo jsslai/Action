@@ -9,21 +9,21 @@
 import Foundation
 import RxSwift
 
-class MySubject<Element where Element : Hashable> : SubjectType, ObserverType {
+class MySubject<Element> : SubjectType, ObserverType where Element : Hashable {
     typealias E = Element
     typealias SubjectObserverType = MySubject<E>
 
     var _disposeOn: [Element : Disposable] = [:]
     var _observer: AnyObserver<Element>! = nil
     var _subscribeCount: Int = 0
-    var _disposed: Bool = false
+    var _isDisposed: Bool = false
     
     var subscribeCount: Int {
         return _subscribeCount
     }
     
-    var diposed: Bool {
-        return _disposed
+    var isDisposed: Bool {
+        return _isDisposed
     }
     
     func disposeOn(_ value: Element, disposable: Disposable) {
@@ -41,13 +41,13 @@ class MySubject<Element where Element : Hashable> : SubjectType, ObserverType {
         }
     }
     
-    func subscribe<O : ObserverType where O.E == E>(_ observer: O) -> Disposable {
+    func subscribe<O : ObserverType>(_ observer: O) -> Disposable where O.E == E {
         _subscribeCount += 1
         _observer = AnyObserver(observer)
         
-        return AnonymousDisposable {
+        return Disposables.create {
             self._observer = AnyObserver { _ -> Void in () }
-            self._disposed = true
+            self._isDisposed = true
         }
     }
 

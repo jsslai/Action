@@ -8,14 +8,14 @@
 
 import Foundation
 
-class ZipCollectionTypeSink<C: Collection, R, O: ObserverType where C.Iterator.Element : ObservableConvertibleType, O.E == R>
-    : Sink<O> {
+class ZipCollectionTypeSink<C: Collection, R, O: ObserverType>
+    : Sink<O> where C.Iterator.Element : ObservableConvertibleType, O.E == R {
     typealias Parent = ZipCollectionType<C, R>
     typealias SourceElement = C.Iterator.Element.E
     
     private let _parent: Parent
     
-    private let _lock = RecursiveLock()
+    private let _lock = NSRecursiveLock()
     
     // state
     private var _numberOfValues = 0
@@ -24,7 +24,7 @@ class ZipCollectionTypeSink<C: Collection, R, O: ObserverType where C.Iterator.E
     private var _numberOfDone = 0
     private var _subscriptions: [SingleAssignmentDisposable]
     
-    init(parent: Parent, observer: O) {
+    init(parent: Parent, observer: O, cancel: Cancelable) {
         _parent = parent
         _values = [Queue<SourceElement>](repeating: Queue(capacity: 4), count: parent.count)
         _isDone = [Bool](repeating: false, count: parent.count)
@@ -35,7 +35,7 @@ class ZipCollectionTypeSink<C: Collection, R, O: ObserverType where C.Iterator.E
             _subscriptions.append(SingleAssignmentDisposable())
         }
         
-        super.init(observer: observer)
+        super.init(observer: observer, cancel: cancel)
     }
     
     func on(_ event: Event<SourceElement>, atIndex: Int) {
@@ -106,32 +106,34 @@ class ZipCollectionTypeSink<C: Collection, R, O: ObserverType where C.Iterator.E
         for i in _parent.sources {
             let index = j
             let source = i.asObservable()
-            _subscriptions[j].disposable = source.subscribe(AnyObserver { event in
+
+            let disposable = source.subscribe(AnyObserver { event in
                 self.on(event, atIndex: index)
                 })
+            _subscriptions[j].setDisposable(disposable)
             j += 1
         }
         
-        return CompositeDisposable(disposables: _subscriptions.map { $0 })
+        return Disposables.create(_subscriptions)
     }
 }
 
-class ZipCollectionType<C: Collection, R where C.Iterator.Element : ObservableConvertibleType> : Producer<R> {
+class ZipCollectionType<C: Collection, R> : Producer<R> where C.Iterator.Element : ObservableConvertibleType {
     typealias ResultSelector = ([C.Iterator.Element.E]) throws -> R
     
     let sources: C
     let resultSelector: ResultSelector
     let count: Int
     
-    init(sources: C, resultSelector: ResultSelector) {
+    init(sources: C, resultSelector: @escaping ResultSelector) {
         self.sources = sources
         self.resultSelector = resultSelector
         self.count = Int(self.sources.count.toIntMax())
     }
     
-    override func run<O : ObserverType where O.E == R>(_ observer: O) -> Disposable {
-        let sink = ZipCollectionTypeSink(parent: self, observer: observer)
-        sink.disposable = sink.run()
-        return sink
+    override func run<O : ObserverType>(_ observer: O, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where O.E == R {
+        let sink = ZipCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = sink.run()
+        return (sink: sink, subscription: subscription)
     }
 }

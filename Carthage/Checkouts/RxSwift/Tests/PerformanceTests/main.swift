@@ -28,9 +28,9 @@ compareTwoImplementations(benchmarkTime: true, benchmarkMemory: false, first: {
         _ = publishSubject //.asDriver(onErrorJustReturn: -1)
     /*create { (o: AnyObserver<Int>) in
             for i in 0..<100 {
-                o.on(.Next(i))
+                o.on(.next(i))
             }
-            return NopDisposable.instance
+            return Disposables.create()
         }*/
         //.retryWhen { $0 }
         .shareReplay(1)
@@ -49,9 +49,9 @@ compareTwoImplementations(benchmarkTime: true, benchmarkMemory: false, first: {
         /*.filter { _ in true }//){ x, _ in x }
         .map { $0 }
         .flatMap { Observable.just($0) }*/
-        .subscribeNext { _ in
+        .subscribe(onNext: { _ in
 
-        }
+        })
 
 
     for i in 0..<100 {

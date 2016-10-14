@@ -17,8 +17,9 @@ NSInteger RX_number_of_swizzled_methods();
 #endif
 
 @protocol SentMessageTestClassCreationProtocol<NSObject>
--(instancetype __nonnull)init;
++(instancetype __nonnull)createInstance;
 
+@property (nonatomic, copy) void (^ __nonnull invokedMethod)();
 @end
 
 @interface RXObjCTestRuntime : NSObject
@@ -33,6 +34,14 @@ NSInteger RX_number_of_swizzled_methods();
 
 @end
 
+@interface Arguments:  NSObject
+
+@property(nonatomic, copy, readonly, nonnull) NSArray *values;
+
++(instancetype __nonnull)argumentsWithValues:(NSArray* __nonnull)values;
+
+@end
+
 typedef struct some_insanely_large_struct {
     int a[8];
     const char * __nullable some_large_text; //:)
@@ -43,7 +52,8 @@ typedef struct some_insanely_large_struct {
 /*##########################################################################################################################################*/ \
 @interface SentMessageTestBase_ ## testName : NSObject<SentMessageTestClassCreationProtocol> { }                                               \
                                                                                                                                                \
-@property (nonatomic, copy) NSArray<NSArray * > * __nonnull baseMessages;                                                                      \
+@property (nonatomic, strong, readonly) NSArray<Arguments *> * __nonnull baseMessages;                                                         \
+@property (nonatomic, copy) void (^ __nonnull invokedMethod)();                                                                                \
                                                                                                                                                \
 -(void)voidJustCalledVoidToSay;                                                                                                                \
                                                                                                                                                \
@@ -121,9 +131,9 @@ typedef struct some_insanely_large_struct {
                                                                                                                                                \
 -(void)voidJustCalledConstCharToSay:(const char * __nonnull)value;                                                                             \
                                                                                                                                                \
--(NSInteger)message_allSupportedParameters:(id __nonnull)p1                                                                                    \
-                                        p2:(Class __nonnull)p2                                                                                 \
-                                        p3:(int32_t (^ __nonnull)(int32_t))p3                                                                  \
+-(NSInteger)message_allSupportedParameters:(id __nullable)p1                                                                                   \
+                                        p2:(Class __nullable)p2                                                                                \
+                                        p3:(int32_t (^ __nullable)(int32_t))p3                                                                 \
                                         p4:(int8_t)p4                                                                                          \
                                         p5:(int16_t)p5                                                                                         \
                                         p6:(int32_t)p6                                                                                         \
@@ -134,8 +144,8 @@ typedef struct some_insanely_large_struct {
                                         p11:(uint64_t)p11                                                                                      \
                                         p12:(float)p12                                                                                         \
                                         p13:(double)p13                                                                                        \
-                                        p14:(const int8_t * __nonnull)p14                                                                      \
-                                        p15:(int8_t * __nonnull)p15                                                                            \
+                                        p14:(const int8_t * __nullable)p14                                                                     \
+                                        p15:(int8_t * __nullable)p15                                                                           \
                                         p16:(some_insanely_large_struct_t)p16;                                                                 \
                                                                                                                                                \
 -(some_insanely_large_struct_t)hugeResult;                                                                                                     \
@@ -145,7 +155,7 @@ baseContent                                                                     
                                                                                                                                                \
 @interface SentMessageTest_ ## testName : SentMessageTestBase_ ## testName<SentMessageTestClassCreationProtocol> { }                           \
                                                                                                                                                \
-@property (nonatomic, copy) NSArray<NSArray * > * __nonnull messages;                                                                          \
+@property (nonatomic, strong, readonly) NSArray<Arguments *> * __nonnull messages;                                                             \
                                                                                                                                                \
 subclassContent                                                                                                                                \
 @end

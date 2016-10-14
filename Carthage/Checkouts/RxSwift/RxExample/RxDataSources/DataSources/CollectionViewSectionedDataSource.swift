@@ -71,7 +71,7 @@ public class CollectionViewSectionedDataSource<S: SectionModelType>
     public typealias I = S.Item
     public typealias Section = S
     public typealias CellFactory = (CollectionViewSectionedDataSource<S>, UICollectionView, IndexPath, I) -> UICollectionViewCell
-    public typealias SupplementaryViewFactory = (CollectionViewSectionedDataSource<S>, UICollectionView, String, NSIndexPath) -> UICollectionReusableView
+    public typealias SupplementaryViewFactory = (CollectionViewSectionedDataSource<S>, UICollectionView, String, IndexPath) -> UICollectionReusableView
 
     #if DEBUG
     // If data source has already been bound, then mutating it
@@ -99,17 +99,24 @@ public class CollectionViewSectionedDataSource<S: SectionModelType>
         return _sectionModels.map { Section(original: $0.model, items: $0.items) }
     }
 
-    public func sectionAtIndex(_ section: Int) -> S {
+    public subscript(section: Int) -> S {
         let sectionModel = self._sectionModels[section]
         return S(original: sectionModel.model, items: sectionModel.items)
     }
     
-    public func itemAtIndexPath(_ indexPath: IndexPath) -> I {
-        return self._sectionModels[(indexPath as NSIndexPath).section].items[(indexPath as NSIndexPath).item]
+    public subscript(indexPath: IndexPath) -> I {
+        get {
+            return self._sectionModels[indexPath.section].items[indexPath.item]
+        }
+        set(item) {
+            var section = self._sectionModels[indexPath.section]
+            section.items[indexPath.item] = item
+            self._sectionModels[indexPath.section] = section
+        }
     }
     
-    public func modelAtIndexPath(_ indexPath: IndexPath) throws -> Any {
-        return itemAtIndexPath(indexPath)
+    public func model(_ indexPath: IndexPath) throws -> Any {
+        return self[indexPath]
     }
     
     public func setSections(_ sections: [S]) {
@@ -142,14 +149,14 @@ public class CollectionViewSectionedDataSource<S: SectionModelType>
         }
     }
     
-    public var moveItem: ((CollectionViewSectionedDataSource<S>, sourceIndexPath:IndexPath, destinationIndexPath:IndexPath) -> Void)? {
+    public var moveItem: ((CollectionViewSectionedDataSource<S>, _ sourceIndexPath:IndexPath, _ destinationIndexPath:IndexPath) -> Void)? {
         didSet {
             #if DEBUG
                 ensureNotMutatedAfterBinding()
             #endif
         }
     }
-    public var canMoveItemAtIndexPath: ((CollectionViewSectionedDataSource<S>, indexPath:IndexPath) -> Bool)? {
+    public var canMoveItemAtIndexPath: ((CollectionViewSectionedDataSource<S>, IndexPath) -> Bool)? {
         didSet {
             #if DEBUG
             ensureNotMutatedAfterBinding()
@@ -186,9 +193,9 @@ public class CollectionViewSectionedDataSource<S: SectionModelType>
     }
     
     override func _rx_collectionView(_ collectionView: UICollectionView, cellForItemAtIndexPath indexPath: IndexPath) -> UICollectionViewCell {
-        precondition((indexPath as NSIndexPath).item < _sectionModels[(indexPath as NSIndexPath).section].items.count)
+        precondition(indexPath.item < _sectionModels[indexPath.section].items.count)
         
-        return configureCell(self, collectionView, indexPath, itemAtIndexPath(indexPath))
+        return configureCell(self, collectionView, indexPath, self[indexPath])
     }
     
     override func _rx_collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, atIndexPath indexPath: IndexPath) -> UICollectionReusableView {
@@ -196,7 +203,7 @@ public class CollectionViewSectionedDataSource<S: SectionModelType>
     }
     
     override func _rx_collectionView(_ collectionView: UICollectionView, canMoveItemAtIndexPath indexPath: IndexPath) -> Bool {
-        guard let canMoveItem = canMoveItemAtIndexPath?(self, indexPath: indexPath) else {
+        guard let canMoveItem = canMoveItemAtIndexPath?(self, indexPath) else {
             return super._rx_collectionView(collectionView, canMoveItemAtIndexPath: indexPath)
         }
         

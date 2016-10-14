@@ -19,14 +19,14 @@ extension AnonymousObservableTests {
         var observer: AnyObserver<Int>!
         let a = Observable.create { o in
             observer = o
-            return NopDisposable.instance
+            return Disposables.create()
         } as Observable<Int>
         
         var elements = [Int]()
         
-        let d = a.subscribeNext { n in
+        let d = a.subscribe(onNext: { n in
             elements.append(n)
-        }
+        })
         
         XCTAssertEqual(elements, [])
         
@@ -43,14 +43,14 @@ extension AnonymousObservableTests {
         var observer: AnyObserver<Int>!
         let a = Observable.create { o in
             observer = o
-            return NopDisposable.instance
+            return Disposables.create()
         } as Observable<Int>
         
         var elements = [Int]()
         
-        _ = a.subscribeNext { n in
+        _ = a.subscribe(onNext: { n in
             elements.append(n)
-        }
+        })
 
         XCTAssertEqual(elements, [])
         
@@ -67,15 +67,15 @@ extension AnonymousObservableTests {
         var observer: AnyObserver<Int>!
         let a = Observable.create { o in
             observer = o
-            return NopDisposable.instance
+            return Disposables.create()
         } as Observable<Int>
         
         var elements = [Int]()
 
-        _ = a.subscribeNext { n in
+        _ = a.subscribe(onNext: { n in
             elements.append(n)
-        }
-        
+        })
+
         XCTAssertEqual(elements, [])
         
         observer.on(.next(0))
@@ -85,5 +85,45 @@ extension AnonymousObservableTests {
         
         observer.on(.next(1))
         XCTAssertEqual(elements, [0])
+    }
+
+    func testAnonymousObservable_disposeReferenceDoesntRetainObservable() {
+
+        var targetDeallocated = false
+
+        var target: NSObject? = NSObject()
+        
+        let subscription = { () -> Disposable in
+            return autoreleasepool {
+                let localTarget = target!
+
+                let sequence = Observable.create { _ in
+                    return Disposables.create {
+                        if arc4random_uniform(4) == 0 {
+                            print(localTarget)
+                        }
+                    }
+                }.map { (n: Int) -> Int in
+                    if arc4random_uniform(4) == 0 {
+                        print(localTarget)
+                    }
+                    return n
+                }
+
+                let subscription = sequence.subscribe(onNext: { _ in })
+
+                _ = localTarget.rx.deallocated.subscribe(onNext: { _ in
+                    targetDeallocated = true
+                })
+
+                return subscription
+            }
+        }()
+
+        target = nil
+        
+        XCTAssertFalse(targetDeallocated)
+        subscription.dispose()
+        XCTAssertTrue(targetDeallocated)
     }
 }
