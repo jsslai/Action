@@ -29,7 +29,7 @@ public extension UIButton {
                 if let action = newValue {
                     action
                         .enabled
-                        .bindTo(self.rx.enabled)
+                        .bindTo(self.rx.isEnabled)
                         .addDisposableTo(self.actionDisposeBag)
 
                     // Technically, this file is only included on tv/iOS platforms,

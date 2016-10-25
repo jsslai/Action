@@ -29,7 +29,7 @@ public extension UIBarButtonItem {
                 if let action = newValue {
                     action
                         .enabled
-                        .bindTo(self.rx.enabled)
+                        .bindTo(self.rx.isEnabled)
                         .addDisposableTo(self.actionDisposeBag)
 
                     self.rx.tap
